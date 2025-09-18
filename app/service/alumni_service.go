@@ -2,7 +2,7 @@ package service
 
 import (
 	"database/sql"
-	"prak4/app/model"
+	"prak4/app/models"
 	"prak4/app/repository"
 	"strconv"
 
@@ -82,7 +82,7 @@ func (s *AlumniService) GetAlumniByAngkatan(c *fiber.Ctx) error {
 }
 
 func (s *AlumniService) CreateAlumni(c *fiber.Ctx) error {
-	var alumni model.Alumni
+	var alumni models.Alumni
 	if err := c.BodyParser(&alumni); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
@@ -122,7 +122,7 @@ func (s *AlumniService) UpdateAlumni(c *fiber.Ctx) error {
 		})
 	}
 
-	var alumni model.Alumni
+	var alumni models.Alumni
 	if err := c.BodyParser(&alumni); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,

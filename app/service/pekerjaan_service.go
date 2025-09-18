@@ -2,7 +2,7 @@ package service
 
 import (
 	"database/sql"
-	"prak4/app/model"
+	"prak4/app/models"
 	"prak4/app/repository"
 	"strconv"
 
@@ -81,7 +81,7 @@ func (s *PekerjaanService) GetPekerjaanByAlumniID(c *fiber.Ctx) error {
 }
 
 func (s *PekerjaanService) CreatePekerjaan(c *fiber.Ctx) error {
-	var p model.PekerjaanAlumni
+	var p models.PekerjaanAlumni
 	if err := c.BodyParser(&p); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,
@@ -121,7 +121,7 @@ func (s *PekerjaanService) UpdatePekerjaan(c *fiber.Ctx) error {
 		})
 	}
 
-	var p model.PekerjaanAlumni
+	var p models.PekerjaanAlumni
 	if err := c.BodyParser(&p); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"success": false,

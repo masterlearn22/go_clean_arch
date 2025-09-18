@@ -2,7 +2,7 @@ package repository
 
 import (
 	"database/sql"
-	"prak4/app/model"
+	"prak4/app/models"
 	"time"
 )
 
@@ -10,16 +10,16 @@ type PekerjaanRepository struct {
 	DB *sql.DB
 }
 
-func (r *PekerjaanRepository) GetAllPekerjaan() ([]model.PekerjaanAlumni, error) {
+func (r *PekerjaanRepository) GetAllPekerjaan() ([]models.PekerjaanAlumni, error) {
 	rows, err := r.DB.Query("SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at FROM pekerjaan_alumni ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var pekerjaanList []model.PekerjaanAlumni
+	var pekerjaanList []models.PekerjaanAlumni
 	for rows.Next() {
-		var p model.PekerjaanAlumni
+		var p models.PekerjaanAlumni
 		if err := rows.Scan(&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.BidangIndustri, &p.LokasiKerja, &p.GajiRange, &p.TanggalMulaiKerja, &p.TanggalSelesaiKerja, &p.StatusPekerjaan, &p.DeskripsiPekerjaan, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -28,8 +28,8 @@ func (r *PekerjaanRepository) GetAllPekerjaan() ([]model.PekerjaanAlumni, error)
 	return pekerjaanList, nil
 }
 
-func (r *PekerjaanRepository) GetPekerjaanByID(id int) (*model.PekerjaanAlumni, error) {
-	var p model.PekerjaanAlumni
+func (r *PekerjaanRepository) GetPekerjaanByID(id int) (*models.PekerjaanAlumni, error) {
+	var p models.PekerjaanAlumni
 	err := r.DB.QueryRow("SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at FROM pekerjaan_alumni WHERE id = $1", id).Scan(&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.BidangIndustri, &p.LokasiKerja, &p.GajiRange, &p.TanggalMulaiKerja, &p.TanggalSelesaiKerja, &p.StatusPekerjaan, &p.DeskripsiPekerjaan, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -37,16 +37,16 @@ func (r *PekerjaanRepository) GetPekerjaanByID(id int) (*model.PekerjaanAlumni, 
 	return &p, nil
 }
 
-func (r *PekerjaanRepository) GetPekerjaanByAlumniID(alumniID int) ([]model.PekerjaanAlumni, error) {
+func (r *PekerjaanRepository) GetPekerjaanByAlumniID(alumniID int) ([]models.PekerjaanAlumni, error) {
 	rows, err := r.DB.Query("SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at FROM pekerjaan_alumni WHERE alumni_id = $1 ORDER BY tanggal_mulai_kerja DESC", alumniID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var pekerjaanList []model.PekerjaanAlumni
+	var pekerjaanList []models.PekerjaanAlumni
 	for rows.Next() {
-		var p model.PekerjaanAlumni
+		var p models.PekerjaanAlumni
 		if err := rows.Scan(&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.BidangIndustri, &p.LokasiKerja, &p.GajiRange, &p.TanggalMulaiKerja, &p.TanggalSelesaiKerja, &p.StatusPekerjaan, &p.DeskripsiPekerjaan, &p.CreatedAt, &p.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -55,7 +55,7 @@ func (r *PekerjaanRepository) GetPekerjaanByAlumniID(alumniID int) ([]model.Peke
 	return pekerjaanList, nil
 }
 
-func (r *PekerjaanRepository) CreatePekerjaan(p *model.PekerjaanAlumni) (int, error) {
+func (r *PekerjaanRepository) CreatePekerjaan(p *models.PekerjaanAlumni) (int, error) {
 	var id int
 	err := r.DB.QueryRow(
 		`INSERT INTO pekerjaan_alumni (alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at) 
@@ -65,7 +65,7 @@ func (r *PekerjaanRepository) CreatePekerjaan(p *model.PekerjaanAlumni) (int, er
 	return id, err
 }
 
-func (r *PekerjaanRepository) UpdatePekerjaan(id int, p *model.PekerjaanAlumni) (int64, error) {
+func (r *PekerjaanRepository) UpdatePekerjaan(id int, p *models.PekerjaanAlumni) (int64, error) {
 	result, err := r.DB.Exec(
 		`UPDATE pekerjaan_alumni SET nama_perusahaan = $1, posisi_jabatan = $2, bidang_industri = $3, lokasi_kerja = $4, gaji_range = $5, tanggal_mulai_kerja = $6, tanggal_selesai_kerja = $7, status_pekerjaan = $8, deskripsi_pekerjaan = $9, updated_at = $10 
 		 WHERE id = $11`,
