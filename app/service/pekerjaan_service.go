@@ -2,6 +2,7 @@ package service
 
 import (
 	"database/sql"
+	"fmt"
 	"prak4/app/models"
 	"prak4/app/repository"
 	"strconv"
@@ -78,6 +79,35 @@ func (s *PekerjaanService) GetPekerjaanByAlumniID(c *fiber.Ctx) error {
 		"message": "Data pekerjaan untuk alumni berhasil diambil",
 		"data":    pekerjaan,
 	})
+}
+
+func GetPekerjaanList(c *fiber.Ctx) error {
+	sortable := repository.PekerjaanSortable()
+	params := getListParams(c, sortable)
+
+	items, err := repository.ListPekerjaanRepo(params.Search, params.SortBy, params.Order, params.Limit, params.Offset)
+	if err != nil {
+		// DEBUG: log detail error
+		fmt.Printf("ListPekerjaanRepo error: %v\n", err)
+		return c.Status(500).JSON(fiber.Map{
+			"error": "failed to fetch pekerjaan",
+		})
+	}
+
+	total, err := repository.CountPekerjaanRepo(params.Search)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to count pekerjaan"})
+	}
+
+	resp := models.UserResponse[models.PekerjaanAlumni]{
+		Data: items,
+		Meta: models.MetaInfo{
+			Page: params.Page, Limit: params.Limit, Total: total,
+			Pages:  (total + params.Limit - 1) / params.Limit,
+			SortBy: params.SortBy, Order: params.Order, Search: params.Search,
+		},
+	}
+	return c.JSON(resp)
 }
 
 func (s *PekerjaanService) CreatePekerjaan(c *fiber.Ctx) error {

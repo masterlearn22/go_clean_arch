@@ -1,13 +1,19 @@
 package repository
 
 import (
+	"fmt"
 	"database/sql"
 	"prak4/app/models"
 	"time"
+	"prak4/database"
 )
 
 type AlumniRepository struct {
 	DB *sql.DB
+}
+// AlumniSortable returns a slice of sortable field names for alumni
+func AlumniSortable() []string {
+    return []string{"nim", "nama", "jurusan", "angkatan", "email"}
 }
 
 func (r *AlumniRepository) GetAllAlumni() ([]models.Alumni, error) {
@@ -75,4 +81,64 @@ func (r *AlumniRepository) DeleteAlumni(id int) (int64, error) {
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+func sanitizeAlumniSort(s string) string {
+    switch s {
+    case "id", "nim", "nama", "jurusan", "angkatan", "email", "created_at", "updated_at":
+        return s
+    default:
+        return "id"
+    }
+}
+
+func sanitizeOrder(o string) string {
+    if o == "desc" || o == "DESC" {
+        return "DESC"
+    }
+    return "ASC"
+}
+
+
+func ListAlumniRepo(search, sortBy, order string, limit, offset int) ([]models.Alumni, error) {
+    // Sanitasi sort & order biar aman dari SQL injection via fmt.Sprintf
+    sortBy = sanitizeAlumniSort(sortBy)
+    order  = sanitizeOrder(order)
+
+    query := fmt.Sprintf(`
+        SELECT id, nama, nim, angkatan
+        FROM alumni
+        WHERE (nama ILIKE $1 OR CAST(nim AS TEXT) ILIKE $1)
+        ORDER BY %s %s, id ASC
+        LIMIT $2 OFFSET $3
+    `, sortBy, order)
+
+    rows, err := database.DB.Query(query, "%"+search+"%", limit, offset)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var items []models.Alumni
+    for rows.Next() {
+        var a models.Alumni
+        if err := rows.Scan(&a.ID, &a.Nama, &a.NIM, &a.Angkatan); err != nil {
+            return nil, err
+        }
+        items = append(items, a)
+    }
+    return items, rows.Err()
+}
+
+func CountAlumniRepo(search string) (int, error) {
+    var total int
+    err := database.DB.QueryRow(`
+        SELECT COUNT(*)
+        FROM alumni
+        WHERE (nama ILIKE $1 OR CAST(nim AS TEXT) ILIKE $1)
+    `, "%"+search+"%").Scan(&total)
+    if err != nil && err != sql.ErrNoRows {
+        return 0, err
+    }
+    return total, nil
 }

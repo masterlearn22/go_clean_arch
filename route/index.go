@@ -34,6 +34,8 @@ func SetupRoutes(app *fiber.App, db *sql.DB) {
 	// ========= Public =========
 	api.Post("/login", handlers.Login)
 	api.Post("/register", userService.RegisterUser)
+	api.Get("/alumni-pag", handlers.GetAlumniListHandler)
+	api.Get("/pekerjaan-pag",  handlers.GetPekerjaanListHandler)
 
 	// ========= Protected (JWT wajib) =========
 	auth := api.Group("", middleware.AuthRequired())

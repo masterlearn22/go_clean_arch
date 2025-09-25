@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"fmt"
+	"log"
 	"prak4/app/models"
 )
 
@@ -51,3 +53,41 @@ func (r *UserRepository) Create(username, email, passwordHash, role string) (*mo
 	}
 	return &u, nil
 }
+func (r *UserRepository) GetUsersRepo(search, sortBy, order string, limit, offset int) ([]models.User, error) {
+	query := fmt.Sprintf(`
+		SELECT id, username, email, created_at
+		FROM users
+		WHERE username ILIKE $1 OR email ILIKE $1
+		ORDER BY %s %s
+		LIMIT $2 OFFSET $3
+	`, sortBy, order)
+
+	rows, err := r.DB.Query(query, "%"+search+"%", limit, offset)
+	if err != nil {
+		log.Println("Query error:", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []models.User
+	for rows.Next() {
+		var u models.User
+		if err := rows.Scan(&u.ID, &u.Username, &u.Email); err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+
+	return users, nil
+}
+
+func (r *UserRepository) CountUsersRepo(search string) (int, error) {
+	var total int
+	countQuery := `SELECT COUNT(*) FROM users WHERE username ILIKE $1 OR email ILIKE $1`
+	err := r.DB.QueryRow(countQuery, "%"+search+"%").Scan(&total)
+	if err != nil && err != sql.ErrNoRows {
+		return 0, err
+	}
+	return total, nil
+}
+

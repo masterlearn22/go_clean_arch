@@ -2,7 +2,8 @@ package service
 
 import (
 	"net/mail"
-	"strings"
+	"strconv" 
+    "strings"
 
 	"github.com/gofiber/fiber/v2"
 	"prak4/app/models"
@@ -12,6 +13,53 @@ import (
 
 type UserService struct {
 	Repo *repository.UserRepository
+}
+
+func (s *UserService) GetUsersService(c *fiber.Ctx) error {
+	page, _ := strconv.Atoi(c.Query("page", "1"))
+	limit, _ := strconv.Atoi(c.Query("limit", "10"))
+	sortBy := c.Query("sortBy", "id")
+	order := c.Query("order", "asc")
+	search := c.Query("search", "")
+	offset := (page - 1) * limit
+
+	// Validasi input
+	sortByWhitelist := map[string]bool{"id": true, "name": true,
+		"email": true, "created_at": true}
+	if !sortByWhitelist[sortBy] {
+		sortBy = "id"
+	}
+	if strings.ToLower(order) != "desc" {
+		order = "asc"
+	}
+
+	// Ambil data dari repository
+	users, err := s.Repo.GetUsersRepo(search, sortBy, order,
+		limit, offset)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch users"})
+	}
+
+	total, err := s.Repo.CountUsersRepo(search)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to count users"})
+	}
+
+	// Buat response pakai model
+	response := models.UserResponse[models.User]{
+		Data: users,
+		Meta: models.MetaInfo{
+			Page:   page,
+			Limit:  limit,
+			Total:  total,
+			Pages:  (total + limit - 1) / limit,
+			SortBy: sortBy,
+			Order:  order,
+			Search: search,
+		},
+	}
+
+	return c.JSON(response)
 }
 
 // helper validasi ringan

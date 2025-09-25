@@ -1,6 +1,7 @@
 package service
 
 import (
+	"fmt"
 	"database/sql"
 	"prak4/app/models"
 	"prak4/app/repository"
@@ -26,6 +27,37 @@ func (s *AlumniService) GetAllAlumni(c *fiber.Ctx) error {
 		"message": "Data alumni berhasil diambil",
 		"data":    alumni,
 	})
+}
+
+func GetAlumniList(c *fiber.Ctx) error {
+	sortable := make(map[string]bool)
+	for _, v := range repository.AlumniSortable() {
+		sortable[v] = true
+	}
+	params := getListParams(c, sortable) // lihat fungsi accessor di bawah
+	items, err := repository.ListAlumniRepo(params.Search, params.SortBy, params.Order, params.Limit, params.Offset)
+	if err != nil {
+    // DEBUG: log detail error
+    fmt.Printf("ListAlumniRepo error: %v\n", err)
+    return c.Status(500).JSON(fiber.Map{
+        "error":  "failed to fetch alumni",
+    })
+}
+
+	total, err := repository.CountAlumniRepo(params.Search)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "failed to count alumni"})
+	}
+
+	resp := models.UserResponse[models.Alumni]{
+		Data: items,
+		Meta: models.MetaInfo{
+			Page: params.Page, Limit: params.Limit, Total: total,
+			Pages: (total + params.Limit - 1) / params.Limit,
+			SortBy: params.SortBy, Order: params.Order, Search: params.Search,
+		},
+	}
+	return c.JSON(resp)
 }
 
 func (s *AlumniService) GetAlumniByID(c *fiber.Ctx) error {
