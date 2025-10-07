@@ -4,7 +4,7 @@ import (
 	"database/sql"
 
 	"prak4/app/handlers"
-	"prak4/app/middleware"
+	"prak4/middleware"
 	"prak4/app/repository"
 	"prak4/app/service"
 

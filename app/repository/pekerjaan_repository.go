@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"fmt"
 	"database/sql"
 	"prak4/app/models"
 	"time"
@@ -19,7 +18,7 @@ func PekerjaanSortable() map[string]bool {
 }
 
 func (r *PekerjaanRepository) GetAllPekerjaan() ([]models.PekerjaanAlumni, error) {
-	rows, err := r.DB.Query("SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at FROM pekerjaan_alumni ORDER BY created_at DESC")
+	rows, err := r.DB.Query("SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at, is_delete FROM pekerjaan_alumni WHERE is_delete = FALSE ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -28,7 +27,7 @@ func (r *PekerjaanRepository) GetAllPekerjaan() ([]models.PekerjaanAlumni, error
 	var pekerjaanList []models.PekerjaanAlumni
 	for rows.Next() {
 		var p models.PekerjaanAlumni
-		if err := rows.Scan(&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.BidangIndustri, &p.LokasiKerja, &p.GajiRange, &p.TanggalMulaiKerja, &p.TanggalSelesaiKerja, &p.StatusPekerjaan, &p.DeskripsiPekerjaan, &p.CreatedAt, &p.UpdatedAt); err != nil {
+		if err := rows.Scan(&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.BidangIndustri, &p.LokasiKerja, &p.GajiRange, &p.TanggalMulaiKerja, &p.TanggalSelesaiKerja, &p.StatusPekerjaan, &p.DeskripsiPekerjaan, &p.CreatedAt, &p.UpdatedAt, &p.IsDeleted); err != nil {
 			return nil, err
 		}
 		pekerjaanList = append(pekerjaanList, p)
@@ -85,50 +84,19 @@ func (r *PekerjaanRepository) UpdatePekerjaan(id int, p *models.PekerjaanAlumni)
 	return result.RowsAffected()
 }
 
-func (r *PekerjaanRepository) DeletePekerjaan(id int) (int64, error) {
-	result, err := r.DB.Exec("DELETE FROM pekerjaan_alumni WHERE id = $1", id)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected()
+func (r *PekerjaanRepository) DeletePekerjaan(id int, deletedBy int) (int64, error) {
+    now := time.Now()
+    query := `
+        UPDATE pekerjaan_alumni
+        SET is_delete = TRUE,
+            deleted_at = $1,
+            deleted_by = $2
+        WHERE id = $3 AND is_delete = FALSE
+    `
+    result, err := r.DB.Exec(query, now, deletedBy, id)
+    if err != nil {
+        return 0, err
+    }
+    return result.RowsAffected()
 }
 
-
-func ListPekerjaanRepo(search, sortBy, order string, limit, offset int) ([]models.PekerjaanAlumni, error) {
-	query := fmt.Sprintf(`
-		SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, tanggal_mulai_kerja
-		FROM pekerjaan_alumni
-		WHERE (nama_perusahaan ILIKE $1 OR posisi_jabatan ILIKE $1)
-		ORDER BY %s %s, id ASC
-		LIMIT $2 OFFSET $3
-	`, sortBy, order)
-
-	rows, err := database.DB.Query(query, "%"+search+"%", limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var items []models.PekerjaanAlumni
-	for rows.Next() {
-		var p models.PekerjaanAlumni
-		if err := rows.Scan(&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.TanggalMulaiKerja); err != nil {
-			return nil, err
-		}
-		items = append(items, p)
-	}
-	return items, rows.Err()
-}
-
-func CountPekerjaanRepo(search string) (int, error) {
-	var total int
-	err := database.DB.QueryRow(`
-		SELECT COUNT(*) 
-		FROM pekerjaan_alumni
-		WHERE (nama_perusahaan ILIKE $1 OR posisi_jabatan ILIKE $1)
-	`, "%"+search+"%").Scan(&total)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, err
-	}
-	return total, nil
-}

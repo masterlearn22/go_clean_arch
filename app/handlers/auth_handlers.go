@@ -5,7 +5,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"prak4/app/models"
-	"prak4/app/utils"
+	"prak4/utils"
 	"prak4/database"
 )
 

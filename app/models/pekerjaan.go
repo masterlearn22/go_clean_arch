@@ -17,4 +17,7 @@ type PekerjaanAlumni struct {
 	DeskripsiPekerjaan *string    `json:"deskripsi_pekerjaan"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
+	IsDeleted          bool       `json:"is_deleted"`
+	DeletedAt         *time.Time `json:"deleted_at,omitempty"`
+	DeletedBy string      `json:"deleted_by"`
 }

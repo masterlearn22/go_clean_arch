@@ -1,10 +1,12 @@
 package service
 
 import (
+	"fmt"
 	"database/sql"
 	"fmt"
 	"prak4/app/models"
 	"prak4/app/repository"
+	"prak4/helper"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -182,14 +184,13 @@ func (s *PekerjaanService) UpdatePekerjaan(c *fiber.Ctx) error {
 }
 
 func (s *PekerjaanService) DeletePekerjaan(c *fiber.Ctx) error {
-	id, err := strconv.Atoi(c.Params("id"))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"success": false,
-			"message": "ID tidak valid",
-		})
-	}
+    // Ambil ID pekerjaan dari parameter URL
+    id, err := strconv.Atoi(c.Params("id"))
+    if err != nil {
+        return helper.ErrorResponse(c, fiber.StatusBadRequest, "ID pekerjaan tidak valid")
+    }
 
+<<<<<<< HEAD
 	rowsAffected, err := s.Repo.DeletePekerjaan(id)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -204,4 +205,35 @@ func (s *PekerjaanService) DeletePekerjaan(c *fiber.Ctx) error {
 		})
 	}
 	return c.JSON(fiber.Map{"success": true, "message": "Pekerjaan berhasil dihapus"})
+=======
+    role := c.Locals("role").(string)
+    userID := c.Locals("user_id").(int)
+
+    pekerjaan, err := s.Repo.GetPekerjaanByID(id)
+    if err != nil {
+        if err == sql.ErrNoRows {
+            return helper.ErrorResponse(c, fiber.StatusNotFound, "Pekerjaan tidak ditemukan")
+        }
+        return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Gagal mengambil data pekerjaan")
+    }
+
+    // ❌ Bukan admin & bukan pemilik pekerjaan
+    if role != "admin" && pekerjaan.AlumniID != userID {
+        return helper.ErrorResponse(c, fiber.StatusForbidden, "Akses ditolak: Anda hanya dapat menghapus pekerjaan Anda sendiri.")
+    }
+
+    // ✅ Soft delete: set is_delete + deleted_at + deleted_by
+    rowsAffected, err := s.Repo.DeletePekerjaan(id, userID)
+    if err != nil {
+        return helper.ErrorResponse(c, fiber.StatusInternalServerError, "Gagal menghapus pekerjaan: "+err.Error())
+    }
+    if rowsAffected == 0 {
+        return helper.ErrorResponse(c, fiber.StatusNotFound, "Pekerjaan tidak ditemukan untuk dihapus")
+    }
+
+    return c.JSON(fiber.Map{
+        "success": true,
+        "message": fmt.Sprintf("Pekerjaan berhasil dihapus oleh user_id=%d", userID),
+    })
+>>>>>>> af843f7 (Memperbarui struktur porject)
 }
