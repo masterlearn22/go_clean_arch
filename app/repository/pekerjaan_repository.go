@@ -1,20 +1,90 @@
 package repository
 
 import (
+	"fmt"
 	"database/sql"
-	"prak4/app/models"
+	"go_clean/app/models"
 	"time"
-	"prak4/database"
+	"go_clean/database"
 )
 
 type PekerjaanRepository struct {
 	DB *sql.DB
 }
 
+
 func PekerjaanSortable() map[string]bool {
 	return map[string]bool{
 		"id": true, "alumni_id": true, "nama_perusahaan": true, "posisi_jabatan": true, "tanggal_mulai_kerja": true,
 	}
+}
+
+// --- Fungsi bantu untuk sanitasi input sort/order ---
+func sanitizePekerjaanSort(s string) string {
+	switch s {
+	case "id", "alumni_id", "nama_perusahaan", "posisi_jabatan", "tanggal_mulai_kerja", "tanggal_selesai_kerja", "created_at", "updated_at":
+		return s
+	default:
+		return "id"
+	}
+}
+
+func sanitizeOrderPekerjaan(o string) string {
+	if o == "desc" || o == "DESC" {
+		return "DESC"
+	}
+	return "ASC"
+}
+
+// --- Fungsi utama untuk List & Count (mirip Alumni) ---
+
+func ListPekerjaanRepo(search, sortBy, order string, limit, offset int) ([]models.PekerjaanAlumni, error) {
+	sortBy = sanitizePekerjaanSort(sortBy)
+	order = sanitizeOrderPekerjaan(order)
+
+	query := fmt.Sprintf(`
+		SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range,
+			   tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at
+		FROM pekerjaan_alumni
+		WHERE is_delete = FALSE
+		  AND (nama_perusahaan ILIKE $1 OR posisi_jabatan ILIKE $1)
+		ORDER BY %s %s, id ASC
+		LIMIT $2 OFFSET $3
+	`, sortBy, order)
+
+	rows, err := database.DB.Query(query, "%"+search+"%", limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []models.PekerjaanAlumni
+	for rows.Next() {
+		var p models.PekerjaanAlumni
+		if err := rows.Scan(
+			&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.BidangIndustri,
+			&p.LokasiKerja, &p.GajiRange, &p.TanggalMulaiKerja, &p.TanggalSelesaiKerja,
+			&p.StatusPekerjaan, &p.DeskripsiPekerjaan, &p.CreatedAt, &p.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, p)
+	}
+	return items, rows.Err()
+}
+
+func CountPekerjaanRepo(search string) (int, error) {
+	var total int
+	err := database.DB.QueryRow(`
+		SELECT COUNT(*)
+		FROM pekerjaan_alumni
+		WHERE is_delete = FALSE
+		  AND (nama_perusahaan ILIKE $1 OR posisi_jabatan ILIKE $1)
+	`, "%"+search+"%").Scan(&total)
+	if err != nil && err != sql.ErrNoRows {
+		return 0, err
+	}
+	return total, nil
 }
 
 func (r *PekerjaanRepository) GetAllPekerjaan() ([]models.PekerjaanAlumni, error) {
@@ -85,18 +155,17 @@ func (r *PekerjaanRepository) UpdatePekerjaan(id int, p *models.PekerjaanAlumni)
 }
 
 func (r *PekerjaanRepository) DeletePekerjaan(id int, deletedBy int) (int64, error) {
-    now := time.Now()
-    query := `
+	now := time.Now()
+	query := `
         UPDATE pekerjaan_alumni
         SET is_delete = TRUE,
             deleted_at = $1,
             deleted_by = $2
         WHERE id = $3 AND is_delete = FALSE
     `
-    result, err := r.DB.Exec(query, now, deletedBy, id)
-    if err != nil {
-        return 0, err
-    }
-    return result.RowsAffected()
+	result, err := r.DB.Exec(query, now, deletedBy, id)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
-

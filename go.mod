@@ -1,4 +1,4 @@
-module prak4
+module go_clean
 
 go 1.25.0
 

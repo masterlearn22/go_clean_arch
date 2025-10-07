@@ -8,9 +8,9 @@ import (
 	"syscall"
 	"time"
 
-	"prak4/config"
-	"prak4/database"
-	"prak4/route"
+	"go_clean/config"
+	"go_clean/database"
+	"go_clean/route"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"

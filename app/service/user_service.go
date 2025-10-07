@@ -6,9 +6,9 @@ import (
     "strings"
 
 	"github.com/gofiber/fiber/v2"
-	"prak4/app/models"
-	"prak4/app/repository"
-	"prak4/utils"
+	"go_clean/app/models"
+	"go_clean/app/repository"
+	"go_clean/utils"
 )
 
 type UserService struct {

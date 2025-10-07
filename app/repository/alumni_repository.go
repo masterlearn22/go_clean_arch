@@ -3,9 +3,9 @@ package repository
 import (
 	"fmt"
 	"database/sql"
-	"prak4/app/models"
+	"go_clean/app/models"
 	"time"
-	"prak4/database"
+	"go_clean/database"
 )
 
 type AlumniRepository struct {
@@ -92,7 +92,7 @@ func sanitizeAlumniSort(s string) string {
     }
 }
 
-func sanitizeOrder(o string) string {
+func sanitizeOrderAlumni(o string) string {
     if o == "desc" || o == "DESC" {
         return "DESC"
     }
@@ -103,7 +103,7 @@ func sanitizeOrder(o string) string {
 func ListAlumniRepo(search, sortBy, order string, limit, offset int) ([]models.Alumni, error) {
     // Sanitasi sort & order biar aman dari SQL injection via fmt.Sprintf
     sortBy = sanitizeAlumniSort(sortBy)
-    order  = sanitizeOrder(order)
+    order  = sanitizeOrderAlumni(order)
 
     query := fmt.Sprintf(`
         SELECT id, nama, nim, angkatan

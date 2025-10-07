@@ -4,8 +4,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"prak4/app/models"
-	"prak4/config"
+	"go_clean/app/models"
+	"go_clean/config"
 )
 
 

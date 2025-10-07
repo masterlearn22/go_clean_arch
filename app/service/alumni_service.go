@@ -2,10 +2,9 @@ package service
 
 import (
 	"fmt"
-	"fmt"
 	"database/sql"
-	"prak4/app/models"
-	"prak4/app/repository"
+	"go_clean/app/models"
+	"go_clean/app/repository"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
@@ -59,52 +58,6 @@ if err != nil {
 		},
 	}
 	return c.JSON(resp)
-}
-
-// getListParams extracts pagination, sorting, and search parameters from the request context.
-func getListParams(c *fiber.Ctx, sortable map[string]bool) struct {
-	Page   int
-	Limit  int
-	Offset int
-	SortBy string
-	Order  string
-	Search string
-} {
-	page, _ := strconv.Atoi(c.Query("page", "1"))
-	limit, _ := strconv.Atoi(c.Query("limit", "10"))
-	if limit <= 0 {
-		limit = 10
-	}
-	if page <= 0 {
-		page = 1
-	}
-	offset := (page - 1) * limit
-
-	sortBy := c.Query("sortBy", "id")
-	if !sortable[sortBy] {
-		sortBy = "id"
-	}
-	order := c.Query("order", "asc")
-	if order != "asc" && order != "desc" {
-		order = "asc"
-	}
-	search := c.Query("search", "")
-
-	return struct {
-		Page   int
-		Limit  int
-		Offset int
-		SortBy string
-		Order  string
-		Search string
-	}{
-		Page:   page,
-		Limit:  limit,
-		Offset: offset,
-		SortBy: sortBy,
-		Order:  order,
-		Search: search,
-	}
 }
 
 func (s *AlumniService) GetAlumniByID(c *fiber.Ctx) error {

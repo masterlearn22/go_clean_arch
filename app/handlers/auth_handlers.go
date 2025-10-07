@@ -4,9 +4,9 @@ import (
 	"database/sql"
 
 	"github.com/gofiber/fiber/v2"
-	"prak4/app/models"
-	"prak4/utils"
-	"prak4/database"
+	"go_clean/app/models"
+	"go_clean/utils"
+	"go_clean/database"
 )
 
 func Login(c *fiber.Ctx) error {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"fmt"
 	"log"
-	"prak4/app/models"
+	"go_clean/app/models"
 )
 
 type UserRepository struct {

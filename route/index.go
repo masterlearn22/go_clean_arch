@@ -3,10 +3,10 @@ package route
 import (
 	"database/sql"
 
-	"prak4/app/handlers"
-	"prak4/middleware"
-	"prak4/app/repository"
-	"prak4/app/service"
+	"go_clean/app/handlers"
+	"go_clean/middleware"
+	"go_clean/app/repository"
+	"go_clean/app/service"
 
 	"github.com/gofiber/fiber/v2"
 )

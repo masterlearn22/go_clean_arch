@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"prak4/utils"
+	"go_clean/utils"
 )
 
 func AuthRequired() fiber.Handler {
