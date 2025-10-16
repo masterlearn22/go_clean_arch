@@ -87,6 +87,8 @@ func CountPekerjaanRepo(search string) (int, error) {
 	return total, nil
 }
 
+
+
 func (r *PekerjaanRepository) GetAllPekerjaan() ([]models.PekerjaanAlumni, error) {
 	rows, err := r.DB.Query("SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at, is_delete FROM pekerjaan_alumni WHERE is_delete = FALSE ORDER BY created_at DESC")
 	if err != nil {
@@ -154,7 +156,7 @@ func (r *PekerjaanRepository) UpdatePekerjaan(id int, p *models.PekerjaanAlumni)
 	return result.RowsAffected()
 }
 
-func (r *PekerjaanRepository) DeletePekerjaan(id int, deletedBy int) (int64, error) {
+func (r *PekerjaanRepository) SoftDeletePekerjaan(id int, deletedBy int) (int64, error) {
 	now := time.Now()
 	query := `
         UPDATE pekerjaan_alumni
@@ -169,3 +171,118 @@ func (r *PekerjaanRepository) DeletePekerjaan(id int, deletedBy int) (int64, err
 	}
 	return result.RowsAffected()
 }
+
+
+// Untuk admin
+func (r *PekerjaanRepository) TrashAllPekerjaan() ([]models.TrashPekerjaanAlumni, error) {
+	rows, err := r.DB.Query(`
+		SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range,
+		       tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan,
+		       created_at, updated_at, is_delete
+		FROM pekerjaan_alumni
+		WHERE is_delete = TRUE
+		ORDER BY created_at DESC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []models.TrashPekerjaanAlumni
+	for rows.Next() {
+		var p models.TrashPekerjaanAlumni
+		if err := rows.Scan(
+			&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan,
+			&p.BidangIndustri, &p.LokasiKerja, &p.GajiRange,
+			&p.TanggalMulaiKerja, &p.TanggalSelesaiKerja,
+			&p.StatusPekerjaan, &p.DeskripsiPekerjaan,
+			&p.CreatedAt, &p.UpdatedAt, &p.IsDeleted,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, p)
+	}
+	return list, nil
+}
+
+// Untuk user
+func (r *PekerjaanRepository) TrashPekerjaanByAlumniID(alumniID int) ([]models.TrashPekerjaanAlumni, error) {
+	rows, err := r.DB.Query(`
+		SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range,
+		       tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan,
+		       created_at, updated_at, is_delete
+		FROM pekerjaan_alumni
+		WHERE is_delete = TRUE AND alumni_id = $1
+		ORDER BY created_at DESC
+	`, alumniID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []models.TrashPekerjaanAlumni
+	for rows.Next() {
+		var p models.TrashPekerjaanAlumni
+		if err := rows.Scan(
+			&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan,
+			&p.BidangIndustri, &p.LokasiKerja, &p.GajiRange,
+			&p.TanggalMulaiKerja, &p.TanggalSelesaiKerja,
+			&p.StatusPekerjaan, &p.DeskripsiPekerjaan,
+			&p.CreatedAt, &p.UpdatedAt, &p.IsDeleted,
+		); err != nil {
+			return nil, err
+		}
+		list = append(list, p)
+	}
+	return list, nil
+}
+
+
+
+func (r *PekerjaanRepository) IsPekerjaanOwnedByUser(pekerjaanID, alumniID int) (bool, error) {
+	var count int
+	err := r.DB.QueryRow(`
+		SELECT COUNT(*) 
+		FROM pekerjaan_alumni 
+		WHERE id = $1 AND alumni_id = $2
+	`, pekerjaanID, alumniID).Scan(&count)
+
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (r *PekerjaanRepository) RestorePekerjaanByID(id int) error {
+	_, err := r.DB.Exec(`
+		UPDATE pekerjaan_alumni
+		SET is_delete = FALSE, deleted_at = NULL, deleted_by = ''
+		WHERE id = $1
+	`, id)
+	return err
+}
+
+
+
+func (r *PekerjaanRepository) HardDeletePekerjaanByID(id int) error {
+	_, err := r.DB.Exec(`
+		DELETE FROM pekerjaan_alumni
+		WHERE id = $1 AND is_delete = TRUE
+	`, id)
+	return err
+}
+
+func (r *PekerjaanRepository) IsTrashedPekerjaanOwnedByUser(pekerjaanID, alumniID int) (bool, error) {
+	var count int
+	err := r.DB.QueryRow(`
+		SELECT COUNT(*)
+		FROM pekerjaan_alumni
+		WHERE id = $1 AND alumni_id = $2 AND is_delete = TRUE
+	`, pekerjaanID, alumniID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+

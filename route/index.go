@@ -34,8 +34,8 @@ func SetupRoutes(app *fiber.App, db *sql.DB) {
 	// ========= Public =========
 	api.Post("/login", handlers.Login)
 	api.Post("/register", userService.RegisterUser)
-	api.Get("/alumni-pag", handlers.GetAlumniListHandler)
-	api.Get("/pekerjaan-pag",  handlers.GetPekerjaanListHandler)
+	
+	
 
 	// ========= Protected (JWT wajib) =========
 	auth := api.Group("", middleware.AuthRequired())
@@ -51,6 +51,9 @@ func SetupRoutes(app *fiber.App, db *sql.DB) {
 	alumni.Get("/", alumniService.GetAllAlumni)
 	alumni.Get("/:id", alumniService.GetAlumniByID)
 	alumni.Get("/angkatan/:angkatan", alumniService.GetAlumniByAngkatan)
+	alumni.Get("/alumni-pag", handlers.GetAlumniListHandler)
+	alumni.Get("/with-pekerjaan/:nim", alumniService.GetAlumniAndPekerjaan)
+
 
 	// write-only untuk admin
 
@@ -59,16 +62,22 @@ func SetupRoutes(app *fiber.App, db *sql.DB) {
 	alumniAdmin.Put("/:id", alumniService.UpdateAlumni)
 	alumniAdmin.Delete("/:id", alumniService.DeleteAlumni)
 
+
 	// ---------- Pekerjaan ----------
 	pkj := auth.Group("/pekerjaan")
 	// read-only untuk user & admin
+	pkj.Get("/trash", pekerjaanService.TrashAllPekerjaan)
 	pkj.Get("/", pekerjaanService.GetAllPekerjaan)
 	pkj.Get("/:id", pekerjaanService.GetPekerjaanByID)
 	pkj.Get("/alumni/:alumni_id", pekerjaanService.GetPekerjaanByAlumniID)
+	api.Get("/pekerjaan-pag",  handlers.GetPekerjaanListHandler)
+	pkj.Put("/restore/:id", pekerjaanService.RestorePekerjaan)
+	pkj.Delete("/hard-delete/:id", pekerjaanService.HardDeletePekerjaan)
+	pkj.Delete("/:id", pekerjaanService.DeletePekerjaan)
+	
 
 	// write-only untuk admin
 	pkjAdmin := pkj.Group("", middleware.AdminOnly())
 	pkjAdmin.Post("/", pekerjaanService.CreatePekerjaan)
 	pkjAdmin.Put("/:id", pekerjaanService.UpdatePekerjaan)
-	pkjAdmin.Delete("/:id", pekerjaanService.DeletePekerjaan)
 }

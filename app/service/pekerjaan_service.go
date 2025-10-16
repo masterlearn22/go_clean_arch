@@ -196,7 +196,7 @@ func (s *PekerjaanService) DeletePekerjaan(c *fiber.Ctx) error {
 	}
 
 	// Kalau DeletePekerjaan di repository butuh deletedBy, tambahkan parameter user ID di sini
-	rowsAffected, err := s.Repo.DeletePekerjaan(id, 0)
+	rowsAffected, err := s.Repo.SoftDeletePekerjaan(id, 0)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"success": false,
@@ -215,3 +215,123 @@ func (s *PekerjaanService) DeletePekerjaan(c *fiber.Ctx) error {
 		"message": "Pekerjaan berhasil dihapus",
 	})
 }
+
+
+func (s *PekerjaanService) TrashAllPekerjaan(c *fiber.Ctx) error {
+	role := c.Locals("role").(string)
+	userID := c.Locals("user_id").(int)
+
+	var pekerjaan interface{}
+	var err error
+
+	if role == "admin" {
+		pekerjaan, err = s.Repo.TrashAllPekerjaan()
+	} else {
+		pekerjaan, err = s.Repo.TrashPekerjaanByAlumniID(userID)
+	}
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"message": "Gagal mengambil data pekerjaan: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Data pekerjaan trash berhasil diambil",
+		"data":    pekerjaan,
+	})
+}
+
+func (s *PekerjaanService) RestorePekerjaan(c *fiber.Ctx) error {
+	role := c.Locals("role").(string)
+	userID := c.Locals("user_id").(int) // ini alumni_id dari token
+	idStr := c.Params("id")
+
+	pekerjaanID, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"message": "ID pekerjaan tidak valid",
+		})
+	}
+
+	// Kalau bukan admin, pastikan pekerjaan ini milik user
+	if role != "admin" {
+		isOwner, err := s.Repo.IsPekerjaanOwnedByUser(pekerjaanID, userID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"success": false,
+				"message": "Gagal memeriksa kepemilikan pekerjaan: " + err.Error(),
+			})
+		}
+		if !isOwner {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"success": false,
+				"message": "Anda tidak memiliki pekerjaan ini",
+			})
+		}
+	}
+
+	// Jalankan restore
+	err = s.Repo.RestorePekerjaanByID(pekerjaanID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"message": "Gagal me-restore pekerjaan: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Pekerjaan berhasil di-restore",
+	})
+}
+
+
+func (s *PekerjaanService) HardDeletePekerjaan(c *fiber.Ctx) error {
+	role := c.Locals("role").(string)
+	userID := c.Locals("user_id").(int)
+	idStr := c.Params("id")
+
+	pekerjaanID, err := strconv.Atoi(idStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"success": false,
+			"message": "ID pekerjaan tidak valid",
+		})
+	}
+
+	// Kalau user biasa, pastikan pekerjaan itu miliknya dan sudah di trash
+	if role != "admin" {
+		isOwnerAndTrashed, err := s.Repo.IsTrashedPekerjaanOwnedByUser(pekerjaanID, userID)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"success": false,
+				"message": "Gagal memeriksa kepemilikan pekerjaan: " + err.Error(),
+			})
+		}
+		if !isOwnerAndTrashed {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"success": false,
+				"message": "Anda tidak memiliki pekerjaan ini atau pekerjaan belum di-trash",
+			})
+		}
+	}
+
+	// Lanjut hard delete
+	err = s.Repo.HardDeletePekerjaanByID(pekerjaanID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"success": false,
+			"message": "Gagal menghapus permanen pekerjaan: " + err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"success": true,
+		"message": "Pekerjaan berhasil dihapus permanen",
+	})
+}
+

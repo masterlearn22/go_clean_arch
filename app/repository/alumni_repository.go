@@ -1,19 +1,20 @@
 package repository
 
 import (
-	"fmt"
 	"database/sql"
+	"fmt"
 	"go_clean/app/models"
-	"time"
 	"go_clean/database"
+	"time"
 )
 
 type AlumniRepository struct {
 	DB *sql.DB
 }
+
 // AlumniSortable returns a slice of sortable field names for alumni
 func AlumniSortable() []string {
-    return []string{"nim", "nama", "jurusan", "angkatan", "email"}
+	return []string{"nim", "nama", "jurusan", "angkatan", "email"}
 }
 
 func (r *AlumniRepository) GetAllAlumni() ([]models.Alumni, error) {
@@ -34,6 +35,30 @@ func (r *AlumniRepository) GetAllAlumni() ([]models.Alumni, error) {
 	return alumniList, nil
 }
 
+func (r *AlumniRepository) GetAlumniAndPekerjaan(nim int) (*models.AlumniPekerjaan, error) {
+	query := `
+        SELECT a.id, a.nim, a.nama, a.jurusan, a.angkatan, a.tahun_lulus, a.email,
+        p.nama_perusahaan, p.posisi_jabatan, p.tanggal_mulai_kerja, p.tanggal_selesai_kerja
+        FROM alumni a
+        JOIN pekerjaan_alumni p ON a.id = p.alumni_id
+        WHERE a.id = $1
+
+    `
+	row := r.DB.QueryRow(query, nim)
+
+	var result models.AlumniPekerjaan
+	err := row.Scan(
+		&result.ID, &result.NIM, &result.Nama, &result.Jurusan,
+		&result.Angkatan, &result.TahunLulus, &result.Email,
+		&result.NamaPerusahaan, &result.Posisi, &result.TahunMulai, &result.TahunSelesai,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func (r *AlumniRepository) GetAlumniByID(id int) (*models.Alumni, error) {
 	var a models.Alumni
 	err := r.DB.QueryRow("SELECT id, nim, nama, jurusan, angkatan, tahun_lulus, email, no_telepon, alamat, created_at, updated_at FROM alumni WHERE id = $1", id).Scan(&a.ID, &a.NIM, &a.Nama, &a.Jurusan, &a.Angkatan, &a.TahunLulus, &a.Email, &a.NoTelepon, &a.Alamat, &a.CreatedAt, &a.UpdatedAt)
@@ -44,12 +69,12 @@ func (r *AlumniRepository) GetAlumniByID(id int) (*models.Alumni, error) {
 }
 
 func (r *AlumniRepository) GetAlumniByAngkatan(angkatan int) (*models.AlumniAngkatan, error) {
-    jumlahalumni := &models.AlumniAngkatan{Angkatan: angkatan}
-    err := r.DB.QueryRow("SELECT COUNT(*) FROM alumni WHERE angkatan = $1", angkatan).Scan(&jumlahalumni.Jumlah)
-    if err != nil {
-        return nil, err
-    }
-    return jumlahalumni, nil
+	jumlahalumni := &models.AlumniAngkatan{Angkatan: angkatan}
+	err := r.DB.QueryRow("SELECT COUNT(*) FROM alumni WHERE angkatan = $1", angkatan).Scan(&jumlahalumni.Jumlah)
+	if err != nil {
+		return nil, err
+	}
+	return jumlahalumni, nil
 }
 
 func (r *AlumniRepository) CreateAlumni(alumni *models.Alumni) (int, error) {
@@ -84,28 +109,27 @@ func (r *AlumniRepository) DeleteAlumni(id int) (int64, error) {
 }
 
 func sanitizeAlumniSort(s string) string {
-    switch s {
-    case "id", "nim", "nama", "jurusan", "angkatan", "email", "created_at", "updated_at":
-        return s
-    default:
-        return "id"
-    }
+	switch s {
+	case "id", "nim", "nama", "jurusan", "angkatan", "email", "created_at", "updated_at":
+		return s
+	default:
+		return "id"
+	}
 }
 
 func sanitizeOrderAlumni(o string) string {
-    if o == "desc" || o == "DESC" {
-        return "DESC"
-    }
-    return "ASC"
+	if o == "desc" || o == "DESC" {
+		return "DESC"
+	}
+	return "ASC"
 }
 
-
 func ListAlumniRepo(search, sortBy, order string, limit, offset int) ([]models.Alumni, error) {
-    // Sanitasi sort & order biar aman dari SQL injection via fmt.Sprintf
-    sortBy = sanitizeAlumniSort(sortBy)
-    order  = sanitizeOrderAlumni(order)
+	// Sanitasi sort & order biar aman dari SQL injection via fmt.Sprintf
+	sortBy = sanitizeAlumniSort(sortBy)
+	order = sanitizeOrderAlumni(order)
 
-    query := fmt.Sprintf(`
+	query := fmt.Sprintf(`
         SELECT id, nama, nim, angkatan
         FROM alumni
         WHERE (nama ILIKE $1 OR CAST(nim AS TEXT) ILIKE $1)
@@ -113,32 +137,32 @@ func ListAlumniRepo(search, sortBy, order string, limit, offset int) ([]models.A
         LIMIT $2 OFFSET $3
     `, sortBy, order)
 
-    rows, err := database.DB.Query(query, "%"+search+"%", limit, offset)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
+	rows, err := database.DB.Query(query, "%"+search+"%", limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
 
-    var items []models.Alumni
-    for rows.Next() {
-        var a models.Alumni
-        if err := rows.Scan(&a.ID, &a.Nama, &a.NIM, &a.Angkatan); err != nil {
-            return nil, err
-        }
-        items = append(items, a)
-    }
-    return items, rows.Err()
+	var items []models.Alumni
+	for rows.Next() {
+		var a models.Alumni
+		if err := rows.Scan(&a.ID, &a.Nama, &a.NIM, &a.Angkatan); err != nil {
+			return nil, err
+		}
+		items = append(items, a)
+	}
+	return items, rows.Err()
 }
 
 func CountAlumniRepo(search string) (int, error) {
-    var total int
-    err := database.DB.QueryRow(`
+	var total int
+	err := database.DB.QueryRow(`
         SELECT COUNT(*)
         FROM alumni
         WHERE (nama ILIKE $1 OR CAST(nim AS TEXT) ILIKE $1)
     `, "%"+search+"%").Scan(&total)
-    if err != nil && err != sql.ErrNoRows {
-        return 0, err
-    }
-    return total, nil
+	if err != nil && err != sql.ErrNoRows {
+		return 0, err
+	}
+	return total, nil
 }
