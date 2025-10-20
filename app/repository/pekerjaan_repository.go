@@ -174,39 +174,40 @@ func (r *PekerjaanRepository) SoftDeletePekerjaan(id int, deletedBy int) (int64,
 
 
 // Untuk admin
-func (r *PekerjaanRepository) TrashAllPekerjaan() ([]models.TrashPekerjaanAlumni, error) {
-	rows, err := r.DB.Query(`
-		SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range,
-		       tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan,
-		       created_at, updated_at, is_delete
-		FROM pekerjaan_alumni
-		WHERE is_delete = TRUE
-		ORDER BY created_at DESC
-	`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+func (r *PekerjaanRepository) TrashAllPekerjaan() ([]models.PekerjaanAlumni, error) {
+    rows, err := r.DB.Query(`
+        SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri,
+               lokasi_kerja, gaji_range, tanggal_mulai_kerja, tanggal_selesai_kerja,
+               status_pekerjaan, deskripsi_pekerjaan, created_at, updated_at,
+               is_delete, deleted_at, deleted_by
+        FROM pekerjaan_alumni
+        WHERE is_delete = true
+        ORDER BY deleted_at DESC
+    `)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
 
-	var list []models.TrashPekerjaanAlumni
-	for rows.Next() {
-		var p models.TrashPekerjaanAlumni
-		if err := rows.Scan(
-			&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan,
-			&p.BidangIndustri, &p.LokasiKerja, &p.GajiRange,
-			&p.TanggalMulaiKerja, &p.TanggalSelesaiKerja,
-			&p.StatusPekerjaan, &p.DeskripsiPekerjaan,
-			&p.CreatedAt, &p.UpdatedAt, &p.IsDeleted,
-		); err != nil {
-			return nil, err
-		}
-		list = append(list, p)
-	}
-	return list, nil
+    var list []models.PekerjaanAlumni
+    for rows.Next() {
+        var p models.PekerjaanAlumni
+        if err := rows.Scan(
+            &p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan, &p.BidangIndustri,
+            &p.LokasiKerja, &p.GajiRange, &p.TanggalMulaiKerja, &p.TanggalSelesaiKerja,
+            &p.StatusPekerjaan, &p.DeskripsiPekerjaan, &p.CreatedAt, &p.UpdatedAt,
+            &p.IsDeleted, &p.DeletedAt, &p.DeletedBy,
+        ); err != nil {
+            return nil, err
+        }
+        list = append(list, p)
+    }
+    return list, nil
 }
 
+
 // Untuk user
-func (r *PekerjaanRepository) TrashPekerjaanByAlumniID(alumniID int) ([]models.TrashPekerjaanAlumni, error) {
+func (r *PekerjaanRepository) TrashPekerjaanByAlumniID(alumniID int) ([]models.PekerjaanAlumni, error) {
 	rows, err := r.DB.Query(`
 		SELECT id, alumni_id, nama_perusahaan, posisi_jabatan, bidang_industri, lokasi_kerja, gaji_range,
 		       tanggal_mulai_kerja, tanggal_selesai_kerja, status_pekerjaan, deskripsi_pekerjaan,
@@ -220,9 +221,9 @@ func (r *PekerjaanRepository) TrashPekerjaanByAlumniID(alumniID int) ([]models.T
 	}
 	defer rows.Close()
 
-	var list []models.TrashPekerjaanAlumni
+	var list []models.PekerjaanAlumni
 	for rows.Next() {
-		var p models.TrashPekerjaanAlumni
+		var p models.PekerjaanAlumni
 		if err := rows.Scan(
 			&p.ID, &p.AlumniID, &p.NamaPerusahaan, &p.PosisiJabatan,
 			&p.BidangIndustri, &p.LokasiKerja, &p.GajiRange,

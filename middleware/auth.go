@@ -37,3 +37,4 @@ func AdminOnly() fiber.Handler {
 		return c.Next()
 	}
 }
+

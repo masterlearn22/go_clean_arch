@@ -91,3 +91,20 @@ func (r *UserRepository) CountUsersRepo(search string) (int, error) {
 	return total, nil
 }
 
+func (r *UserRepository) GetUserByID(id int) (*models.User, error) {
+    var u models.User
+    err := r.DB.QueryRow(`
+        SELECT id, username, email, role, alumni_id
+        FROM users
+        WHERE id = $1
+    `, id).Scan(
+        &u.ID, &u.Username, &u.Email, &u.Role, &u.AlumniID,
+    )
+    if err != nil {
+        return nil, err
+    }
+    return &u, nil
+}
+
+
+

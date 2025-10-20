@@ -4,80 +4,95 @@ import (
 	"database/sql"
 
 	"go_clean/app/handlers"
-	"go_clean/middleware"
 	"go_clean/app/repository"
 	"go_clean/app/service"
+	"go_clean/middleware"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func SetupRoutes(app *fiber.App, db *sql.DB) {
-	// Initialize repositories
+	// =======================
+	// REPOSITORIES
+	// =======================
 	alumniRepo := &repository.AlumniRepository{DB: db}
 	pekerjaanRepo := &repository.PekerjaanRepository{DB: db}
+	userRepo := &repository.UserRepository{DB: db}
 
-	// Initialize services (tipe method-nya sudah kompatibel: func(*fiber.Ctx) error)
+	// =======================
+	// SERVICES
+	// =======================
 	alumniService := &service.AlumniService{Repo: alumniRepo}
 	pekerjaanService := &service.PekerjaanService{Repo: pekerjaanRepo}
-	userRepo := &repository.UserRepository{DB: db}
 	userService := &service.UserService{Repo: userRepo}
-	// Tambahkan inisialisasi userService jika diperlukan dependency lain, tambahkan di sini
 
-	// Root
+	// =======================
+	// ROOT
+	// =======================
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Welcome to the Alumni Management API")
+		return c.SendString("Welcome to the Alumni Management API 🚀")
 	})
 
-	// Base group
+	// =======================
+	// PUBLIC
+	// =======================
 	api := app.Group("/api")
-
-	// ========= Public =========
 	api.Post("/login", handlers.Login)
 	api.Post("/register", userService.RegisterUser)
-	
-	
 
-	// ========= Protected (JWT wajib) =========
+	// =======================
+	// PROTECTED (JWT REQUIRED)
+	// =======================
 	auth := api.Group("", middleware.AuthRequired())
-	auth.Group("/users", middleware.AdminOnly())
+
+	// -- Admin create user --
 	auth.Post("/register-admin", middleware.AdminOnly(), userService.AdminCreateUser)
 
-	// Cek profil (ambil dari klaim token)
+	// -- Profile user login --
 	auth.Get("/profile", handlers.Profile)
 
-	// ---------- Alumni ----------
+	// =======================
+	// ALUMNI ROUTES
+	// =======================
 	alumni := auth.Group("/alumni")
-	// read-only untuk user & admin
+
+	// ✅ Read-only untuk semua user login
 	alumni.Get("/", alumniService.GetAllAlumni)
 	alumni.Get("/:id", alumniService.GetAlumniByID)
 	alumni.Get("/angkatan/:angkatan", alumniService.GetAlumniByAngkatan)
 	alumni.Get("/alumni-pag", handlers.GetAlumniListHandler)
 	alumni.Get("/with-pekerjaan/:nim", alumniService.GetAlumniAndPekerjaan)
 
-
-	// write-only untuk admin
-
+	// ✅ Write-only khusus admin
 	alumniAdmin := alumni.Group("", middleware.AdminOnly())
 	alumniAdmin.Post("/", alumniService.CreateAlumni)
 	alumniAdmin.Put("/:id", alumniService.UpdateAlumni)
 	alumniAdmin.Delete("/:id", alumniService.DeleteAlumni)
 
-
-	// ---------- Pekerjaan ----------
+	// =======================
+	// PEKERJAAN ROUTES
+	// =======================
 	pkj := auth.Group("/pekerjaan")
-	// read-only untuk user & admin
+
+	// ✅ Semua user login bisa baca
 	pkj.Get("/trash", pekerjaanService.TrashAllPekerjaan)
 	pkj.Get("/", pekerjaanService.GetAllPekerjaan)
 	pkj.Get("/:id", pekerjaanService.GetPekerjaanByID)
 	pkj.Get("/alumni/:alumni_id", pekerjaanService.GetPekerjaanByAlumniID)
-	api.Get("/pekerjaan-pag",  handlers.GetPekerjaanListHandler)
 	pkj.Put("/restore/:id", pekerjaanService.RestorePekerjaan)
 	pkj.Delete("/hard-delete/:id", pekerjaanService.HardDeletePekerjaan)
-	pkj.Delete("/:id", pekerjaanService.DeletePekerjaan)
-	
 
-	// write-only untuk admin
+	// ✅ Semua user login bisa update & delete
+	//    (validasi “milik sendiri” dilakukan di service)
+	pkj.Put("/:id", pekerjaanService.UpdatePekerjaan)
+	pkj.Delete("/:id", pekerjaanService.DeletePekerjaan)
+
+	// ✅ Admin-only untuk Create
 	pkjAdmin := pkj.Group("", middleware.AdminOnly())
 	pkjAdmin.Post("/", pekerjaanService.CreatePekerjaan)
-	pkjAdmin.Put("/:id", pekerjaanService.UpdatePekerjaan)
+
+	// =======================
+	// PAGINATION HANDLER
+	// =======================
+	api.Get("/pekerjaan-pag", handlers.GetPekerjaanListHandler)
 }

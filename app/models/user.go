@@ -9,7 +9,10 @@ type RegisterRequest struct {
 	// Role JANGAN dipakai untuk public register
 }
 
+
 type AdminCreateUserRequest struct {
+	ID       int    `json:"id"`
+	AlumniID int    `json:"alumni_id"`
 	Username string `json:"username"`
 	Email    string `json:"email"`
 	Password string `json:"password"`

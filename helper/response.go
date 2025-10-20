@@ -18,3 +18,4 @@ func ErrorResponse(c *fiber.Ctx, statusCode int, message string) error {
 		"message": message,
 	})
 }
+
