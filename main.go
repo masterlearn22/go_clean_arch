@@ -19,18 +19,19 @@ import (
 )
 
 func main() {
-	// 1) Load env duluan
+	// 1️⃣ Load env
 	config.LoadEnv()
 
-	// 2) Connect DB
+	// 2️⃣ Connect ke PostgreSQL
 	database.ConnectDB()
 	defer database.DB.Close()
 
-	// 3) Fiber app + middleware dasar
+	// 3️⃣ Connect ke MongoDB
+	database.ConnectMongoDB()
+
+	// 4️⃣ Setup Fiber app
 	app := fiber.New(fiber.Config{
-		// optional: batas body biar aman
-		BodyLimit: 10 * 1024 * 1024, // 10MB
-		// optional: custom error handler sederhana
+		BodyLimit: 10 * 1024 * 1024,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -43,44 +44,45 @@ func main() {
 		},
 	})
 
-	// Logger hanya saat non-production
+	// 5️⃣ Middleware
 	if os.Getenv("APP_ENV") != "production" {
 		app.Use(logger.New())
 	}
 	app.Use(recover.New())
 	app.Use(cors.New())
 
-	// 4) (Opsional) Root endpoint singkat — atau pindahkan ke router, pilih salah satu
+	// 6️⃣ Root sederhana
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Welcome to Alumni API")
+		return c.SendString("Welcome to Alumni API 🚀")
 	})
 
-	// 5) Register routes
-	route.SetupRoutes(app, database.DB)
+	// 7️⃣ Register routes (Postgres + Mongo)
+	route.SetupPekerjaanMongoRoutes(app, database.MongoDB)
+	route.SetupAlumniMongoRoutes(app, database.MongoDB)
+	route.SetupRoutes(app, database.DB, database.MongoDB)
 
-	// 6) Start server + graceful shutdown
+
+	// 8️⃣ Start server
 	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	// Jalankan server di goroutine
 	go func() {
-		log.Printf("Server listening on :%s\n", port)
+		log.Printf("Server running on :%s", port)
 		if err := app.Listen(":" + port); err != nil {
-			log.Printf("Server stopped: %v\n", err)
+			log.Printf("Server stopped: %v", err)
 		}
 	}()
 
-	// Tangkap signal OS
+	// 9️⃣ Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
 
-	// Shutdown dengan timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := app.ShutdownWithContext(ctx); err != nil {
-		log.Printf("Server forced to shutdown: %v\n", err)
+		log.Printf("Server forced to shutdown: %v", err)
 	}
 }

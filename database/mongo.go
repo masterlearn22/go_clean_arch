@@ -1,43 +1,43 @@
 package database
 
 import (
-    "context"
-    "fmt"
-    "log"
-    "time"
+	"context"
+	"log"
+	"os"
+	"time"
 
-    "go.mongodb.org/mongo-driver/mongo"
-    "go.mongodb.org/mongo-driver/mongo/options"
+	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-var MongoClient *mongo.Client
 var MongoDB *mongo.Database
 
-func ConnectMongo(uri string, dbName string) {
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
+func ConnectMongoDB() {
+	uri := os.Getenv("MONGO_URI")
+	dbName := os.Getenv("MONGO_DB")
 
-    clientOpts := options.Client().ApplyURI(uri)
-    client, err := mongo.Connect(ctx, clientOpts)
-    if err != nil {
-        log.Fatalf("error connecting mongodb: %v", err)
-    }
+	if uri == "" {
+		uri = "mongodb://localhost:27017"
+		log.Println("⚠️  MONGO_URI tidak diset, gunakan default:", uri)
+	}
+	if dbName == "" {
+		dbName = "alumni_db"
+		log.Println("⚠️  MONGO_DB tidak diset, gunakan default:", dbName)
+	}
 
-    err = client.Ping(ctx, nil)
-    if err != nil {
-        log.Fatalf("error ping mongodb: %v", err)
-    }
+	clientOpts := options.Client().ApplyURI(uri)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-    MongoClient = client
-    MongoDB = client.Database(dbName)
+	client, err := mongo.Connect(ctx, clientOpts)
+	if err != nil {
+		log.Fatalf("❌ Gagal koneksi MongoDB: %v", err)
+	}
 
-    fmt.Println("✅ MongoDB connected:", uri, "db:", dbName)
-}
+	if err := client.Ping(ctx, nil); err != nil {
+		log.Fatalf("❌ Gagal ping MongoDB: %v", err)
+	}
 
-func CloseMongo() {
-    ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-    defer cancel()
-    if MongoClient != nil {
-        _ = MongoClient.Disconnect(ctx)
-    }
+	MongoDB = client.Database(dbName)
+	log.Println("✅ Berhasil konek MongoDB:", dbName)
 }
