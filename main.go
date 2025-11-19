@@ -44,12 +44,13 @@ import (
 
 	"go_clean/config"
 	"go_clean/database"
+	FiberApp "go_clean/fiber"
 	routePostgre "go_clean/route/postgresql"
 	routeMongo "go_clean/route/mongodb"
 	repoMongo "go_clean/app/repository/mongodb"
 	serviceMongo "go_clean/app/service/mongodb"
 
-	"github.com/gofiber/fiber/v2"
+	// "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
@@ -83,23 +84,10 @@ func main() {
 	database.ConnectMongoDB()
 
 	// 4️ Setup Fiber app
-	app := fiber.New(fiber.Config{
-		BodyLimit: 10 * 1024 * 1024,
-		ErrorHandler: func(c *fiber.Ctx, err error) error {
-			code := fiber.StatusInternalServerError
-			if e, ok := err.(*fiber.Error); ok {
-				code = e.Code
-			}
-			return c.Status(code).JSON(fiber.Map{
-				"error":   true,
-				"message": err.Error(),
-			})
-		},
-	})
+	app := FiberApp.SetupFiber()
 
 	docs.SwaggerInfo.BasePath = "/api"
     app.Get("/swagger/*", fiberSwagger.WrapHandler)
-	// fmt.Println(utils.CheckPassword("1234567890", "$2a$10$Xz/EzXs7KQhW.E1yi8FFduquooVrzcYyvYTwEg15uQE9jqCANpmsu"))
 	log.Println("➡️  Swagger UI available at: http://localhost:" + os.Getenv("APP_PORT") + "/swagger/index.html")
 
 
@@ -110,16 +98,12 @@ func main() {
 	app.Use(recover.New())
 	app.Use(cors.New())
 
-	// 6️ Root sederhana
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Welcome to Alumni API 🚀")
-	})
+	// 6️ Register  routes MongoDB
 	routeMongo.SetupAuthMongoRoutes(app, database.MongoDB)
-
-
-	// 7️ Register routes (Postgres + Mongo)
 	routeMongo.SetupPekerjaanMongoRoutes(app, database.MongoDB)
 	routeMongo.SetupAlumniMongoRoutes(app, database.MongoDB)
+
+	// 7️ Register routes PostgreSQL
 	routePostgre.SetupRoutes(app, database.DB)
 
 	// 8 Tambahkan fitur Upload File

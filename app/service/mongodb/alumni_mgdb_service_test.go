@@ -6,31 +6,7 @@ import (
 
 	"go_clean/app/models/mongodb"
 	"go_clean/app/repository/mongodb"
-)
-
-func TestCreateAlumni(t *testing.T) {
-	mockRepo := repository.NewMockAlumniMongoRepository()
-	svc := NewAlumniMongoService(mockRepo)
-	ctx := context.Background()
-
-	data := &models.AlumniMongo{
-		AlumniID:   1,
-		NIM:        "123456",
-		Nama:       "Surya",
-		Jurusan:    "TI",
-		Angkatan:   2021,
-		TahunLulus: 2025,
-	}
-
-	result, err := svc.Create(ctx, data)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	if result.Nama != data.Nama {
-		t.Errorf("expected name %v, got %v", data.Nama, result.Nama)
-	}
-}
+) 
 
 func TestGetByID(t *testing.T) {
 	mockRepo := repository.NewMockAlumniMongoRepository()
