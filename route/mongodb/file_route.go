@@ -1,16 +1,26 @@
 package route
 
 import (
-    "go_clean/app/service/mongodb"
+    Repo "go_clean/app/repository/mongodb"
+    Srv "go_clean/app/service/mongodb"
     "github.com/gofiber/fiber/v2"
+    "go.mongodb.org/mongo-driver/mongo"
 )
 
-func SetupFileRoutes(app *fiber.App, service service.FileService) {
-    api := app.Group("/api")
+func SetupFileRoutes(app *fiber.App, mongoDB *mongo.Database) {
 
-    files := api.Group("/files")
-    files.Post("/upload", service.UploadFile)
-    files.Get("/", service.GetAllFiles)
-    files.Get("/:id", service.GetFileByID)
-    files.Delete("/:id", service.DeleteFile)
+    // Folder static untuk akses file
+    app.Static("/uploads", "./uploads")
+
+    api := app.Group("/api")
+    fileGroup := api.Group("/files")
+
+    repo := Repo.NewFileRepository(mongoDB)
+    srv := Srv.NewFileService(repo, "./uploads")
+
+    fileGroup.Post("/upload", srv.UploadFile)
+    fileGroup.Get("/", srv.GetAllFiles)
+    fileGroup.Get("/:id", srv.GetFileByID)
+    fileGroup.Delete("/:id", srv.DeleteFile)
 }
+

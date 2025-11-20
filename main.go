@@ -47,8 +47,6 @@ import (
 	FiberApp "go_clean/fiber"
 	routePostgre "go_clean/route/postgresql"
 	routeMongo "go_clean/route/mongodb"
-	repoMongo "go_clean/app/repository/mongodb"
-	serviceMongo "go_clean/app/service/mongodb"
 
 	// "github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -86,6 +84,7 @@ func main() {
 	// 4️ Setup Fiber app
 	app := FiberApp.SetupFiber()
 
+	// Swagger
 	docs.SwaggerInfo.BasePath = "/api"
     app.Get("/swagger/*", fiberSwagger.WrapHandler)
 	log.Println("➡️  Swagger UI available at: http://localhost:" + os.Getenv("APP_PORT") + "/swagger/index.html")
@@ -102,17 +101,13 @@ func main() {
 	routeMongo.SetupAuthMongoRoutes(app, database.MongoDB)
 	routeMongo.SetupPekerjaanMongoRoutes(app, database.MongoDB)
 	routeMongo.SetupAlumniMongoRoutes(app, database.MongoDB)
+	routeMongo.SetupFileRoutes(app, database.MongoDB)
 
 	// 7️ Register routes PostgreSQL
 	routePostgre.SetupRoutes(app, database.DB)
+	
 
-	// 8 Tambahkan fitur Upload File
-	app.Static("/uploads", "./uploads") // agar file bisa diakses langsung via URL
-	uploadRepo := repoMongo.NewFileRepository(database.MongoDB)
-	uploadService := serviceMongo.NewFileService(uploadRepo, "./uploads")
-	routeMongo.SetupFileRoutes(app, uploadService)
-
-	// 9 Start server
+	// 8 Start server
 	port := os.Getenv("APP_PORT")
 	if port == "" {
 		port = "8080"
@@ -125,7 +120,7 @@ func main() {
 		}
 	}()
 
-	// 10 Graceful shutdown
+	// 9 Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
 	<-quit
